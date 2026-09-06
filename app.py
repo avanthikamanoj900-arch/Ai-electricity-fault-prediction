@@ -1,23 +1,21 @@
 import streamlit as st
-import pandas as pd
 import numpy as np
+import pandas as pd
 import joblib
-import time
 
-# ============================================================
+# =========================================================
 # PAGE CONFIG
-# ============================================================
+# =========================================================
 
 st.set_page_config(
     page_title="ElectroGuard AI",
     page_icon="⚡",
-    layout="wide",
-    initial_sidebar_state="collapsed"
+    layout="wide"
 )
 
-# ============================================================
+# =========================================================
 # LOAD MODEL
-# ============================================================
+# =========================================================
 
 @st.cache_resource
 def load_model():
@@ -28,45 +26,50 @@ def load_model():
 
 model, scaler = load_model()
 
-
-# ============================================================
+# =========================================================
 # SESSION STATE
-# ============================================================
+# =========================================================
 
 if "page" not in st.session_state:
-    st.session_state.page = "Home"
+    st.session_state.page = "Overview"
 
 if "prediction" not in st.session_state:
     st.session_state.prediction = None
 
+if "confidence" not in st.session_state:
+    st.session_state.confidence = 0.0
 
-# ============================================================
-# CUSTOM WEBSITE STYLE
-# ============================================================
+
+# =========================================================
+# CSS
+# =========================================================
 
 st.markdown("""
 <style>
 
-/* ---------- GLOBAL ---------- */
+@import url(
+'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap'
+);
+
+* {
+    font-family: 'Inter', sans-serif;
+}
 
 .stApp {
-    background:
-        radial-gradient(circle at 85% 10%, rgba(20,115,255,0.12), transparent 30%),
-        radial-gradient(circle at 10% 80%, rgba(0,210,255,0.06), transparent 25%),
-        #07111f;
+    background: #070d17;
     color: #ffffff;
 }
 
 .block-container {
-    max-width: 1400px;
-    padding: 1.2rem 4rem 4rem 4rem;
-}
-
-#MainMenu {
-    visibility: hidden;
+    max-width: 1450px;
+    padding: 25px 55px 60px 55px;
 }
 
 header {
+    visibility: hidden;
+}
+
+#MainMenu {
     visibility: hidden;
 }
 
@@ -75,566 +78,536 @@ footer {
 }
 
 
-/* ---------- NAVBAR ---------- */
+/* ================= NAVBAR ================= */
 
-.nav {
+.navbar {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 15px 0 25px 0;
+    height: 65px;
+    border-bottom: 1px solid #172333;
+    margin-bottom: 35px;
 }
 
-.logo-area {
+.logo-wrapper {
     display: flex;
     align-items: center;
-    gap: 13px;
+    gap: 12px;
 }
 
 .logo {
-    width: 43px;
-    height: 43px;
-    border-radius: 12px;
-    background: linear-gradient(135deg, #1e8cff, #00c8ff);
+    width: 42px;
+    height: 42px;
+    border-radius: 10px;
+    background: #1683ff;
     display: flex;
-    align-items: center;
     justify-content: center;
+    align-items: center;
     font-size: 21px;
-    font-weight: 900;
-    color: white;
-    box-shadow: 0 0 25px rgba(0,160,255,0.25);
 }
 
-.logo-text {
-    font-size: 21px;
+.brand {
+    font-size: 20px;
     font-weight: 800;
-    letter-spacing: -0.5px;
 }
 
-.logo-sub {
+.brand-small {
     font-size: 9px;
-    color: #6f8198;
-    letter-spacing: 1.4px;
-    margin-top: 2px;
+    color: #61748a;
+    letter-spacing: 1.5px;
 }
 
-.status {
+.online {
+    color: #30d98a;
+    font-size: 12px;
     display: flex;
     align-items: center;
-    gap: 8px;
-    background: rgba(255,255,255,0.045);
-    border: 1px solid rgba(255,255,255,0.08);
-    border-radius: 20px;
-    padding: 8px 14px;
-    color: #a8b7c8;
-    font-size: 12px;
+    gap: 7px;
 }
 
-.status-dot {
+.online-dot {
     width: 7px;
     height: 7px;
     border-radius: 50%;
-    background: #22d58a;
-    box-shadow: 0 0 10px #22d58a;
+    background: #30d98a;
+    box-shadow: 0 0 10px #30d98a;
 }
 
 
-/* ---------- HERO ---------- */
+/* ================= HERO ================= */
 
 .hero {
-    min-height: 540px;
-    border-radius: 28px;
-    background:
-        linear-gradient(
-            110deg,
-            rgba(8,28,50,0.98),
-            rgba(9,39,70,0.93)
-        );
-    border: 1px solid rgba(255,255,255,0.08);
+    min-height: 490px;
+    border-radius: 24px;
+    padding: 65px;
     position: relative;
     overflow: hidden;
-    padding: 75px 70px;
+    background:
+        radial-gradient(
+            circle at 80% 40%,
+            rgba(19,133,255,0.18),
+            transparent 32%
+        ),
+        linear-gradient(
+            135deg,
+            #0a1a2d,
+            #071321
+        );
+    border: 1px solid #17283b;
 }
 
-.hero-grid {
+.grid {
     position: absolute;
     inset: 0;
-    opacity: 0.18;
+    opacity: 0.13;
     background-image:
-        linear-gradient(rgba(60,150,220,0.15) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(60,150,220,0.15) 1px, transparent 1px);
-    background-size: 55px 55px;
+        linear-gradient(#3b76a5 1px, transparent 1px),
+        linear-gradient(90deg, #3b76a5 1px, transparent 1px);
+    background-size: 50px 50px;
 }
 
 .hero-content {
     position: relative;
     z-index: 2;
-    max-width: 720px;
+    width: 58%;
 }
 
-.eyebrow {
-    display: inline-flex;
-    padding: 7px 13px;
-    border: 1px solid rgba(57,169,255,0.3);
-    border-radius: 20px;
-    background: rgba(30,140,255,0.08);
-    color: #54b7ff;
-    font-size: 11px;
+.tag {
+    display: inline-block;
+    padding: 8px 14px;
+    border: 1px solid #1b6dab;
+    border-radius: 30px;
+    color: #42aaff;
+    font-size: 10px;
     font-weight: 700;
     letter-spacing: 1.5px;
+    background: rgba(20,130,255,0.07);
 }
 
 .hero-title {
-    font-size: 60px;
-    line-height: 1.03;
-    letter-spacing: -2.8px;
-    font-weight: 850;
-    margin-top: 24px;
-}
-
-.hero-title span {
-    background: linear-gradient(90deg, #ffffff, #55b9ff);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.hero-description {
-    color: #91a6bb;
-    font-size: 17px;
-    line-height: 1.75;
-    max-width: 620px;
+    font-size: 58px;
+    line-height: 1.04;
+    font-weight: 800;
+    letter-spacing: -2px;
     margin-top: 22px;
 }
 
-.hero-panel {
-    position: absolute;
-    right: 60px;
-    top: 85px;
-    width: 360px;
-    height: 365px;
-    background: rgba(5,18,32,0.72);
-    border: 1px solid rgba(75,170,255,0.16);
-    border-radius: 20px;
-    padding: 23px;
-    z-index: 3;
-    backdrop-filter: blur(12px);
-    box-shadow: 0 25px 80px rgba(0,0,0,0.35);
+.blue {
+    color: #36a5ff;
 }
 
-.panel-top {
+.hero-text {
+    color: #8498ac;
+    font-size: 16px;
+    line-height: 1.8;
+    max-width: 610px;
+    margin-top: 20px;
+}
+
+
+/* ================= MONITOR ================= */
+
+.monitor {
+    position: absolute;
+    right: 55px;
+    top: 65px;
+    width: 390px;
+    height: 355px;
+    background: #081522;
+    border: 1px solid #19354d;
+    border-radius: 18px;
+    padding: 22px;
+    box-shadow: 0 25px 70px rgba(0,0,0,0.4);
+}
+
+.monitor-header {
     display: flex;
     justify-content: space-between;
-    align-items: center;
-    margin-bottom: 25px;
-}
-
-.panel-title {
-    font-size: 12px;
-    color: #9cb1c5;
-    letter-spacing: 1px;
+    color: #8195a9;
+    font-size: 11px;
 }
 
 .live {
-    color: #28d991;
-    font-size: 10px;
-    font-weight: 700;
-}
-
-.wave-area {
-    height: 150px;
-    border-radius: 12px;
-    background:
-        linear-gradient(rgba(40,130,200,0.07) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(40,130,200,0.07) 1px, transparent 1px);
-    background-size: 30px 30px;
-    padding: 10px;
+    color: #28d58a;
 }
 
 .wave {
+    margin-top: 25px;
+    height: 155px;
+    background:
+        linear-gradient(#102c40 1px, transparent 1px),
+        linear-gradient(90deg, #102c40 1px, transparent 1px);
+    background-size: 30px 30px;
+    border-radius: 10px;
+}
+
+.wave svg {
     width: 100%;
     height: 100%;
 }
 
-.readings {
-    display: flex;
+.monitor-data {
+    display: grid;
+    grid-template-columns: repeat(3,1fr);
     gap: 10px;
-    margin-top: 20px;
+    margin-top: 18px;
 }
 
-.reading {
-    flex: 1;
-    padding: 13px;
-    background: rgba(255,255,255,0.035);
-    border-radius: 10px;
+.data {
+    background: #0d1c2b;
+    border-radius: 9px;
+    padding: 12px;
 }
 
-.reading-label {
+.data-label {
+    color: #5f7489;
     font-size: 9px;
-    color: #72869a;
-    text-transform: uppercase;
 }
 
-.reading-value {
-    font-size: 18px;
-    font-weight: 750;
-    margin-top: 5px;
-}
-
-
-/* ---------- BUTTONS ---------- */
-
-.stButton > button {
-    border-radius: 10px !important;
-    height: 46px !important;
-    font-weight: 700 !important;
-    border: 1px solid rgba(255,255,255,0.1) !important;
-}
-
-.stButton > button[kind="primary"] {
-    background: linear-gradient(90deg, #147fff, #00aeea) !important;
-    color: white !important;
-    border: none !important;
+.data-value {
+    font-size: 17px;
+    font-weight: 700;
+    margin-top: 4px;
 }
 
 
-/* ---------- SECTION ---------- */
+/* ================= SECTIONS ================= */
 
 .section {
-    margin-top: 80px;
+    margin-top: 75px;
 }
 
-.section-kicker {
-    color: #3fa9ff;
+.kicker {
+    color: #2799ff;
     font-size: 10px;
+    font-weight: 800;
     letter-spacing: 2px;
-    font-weight: 800;
-    margin-bottom: 12px;
 }
 
-.section-title {
-    font-size: 36px;
+.title {
+    font-size: 34px;
     font-weight: 800;
-    letter-spacing: -1px;
+    margin-top: 8px;
 }
 
-.section-description {
+.subtitle {
     color: #71869b;
-    max-width: 680px;
+    font-size: 14px;
+    max-width: 700px;
     line-height: 1.7;
-    margin-top: 10px;
+    margin-top: 8px;
 }
 
 
-/* ---------- STATISTICS ---------- */
+/* ================= STATS ================= */
 
-.stat {
-    background: rgba(255,255,255,0.035);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 16px;
-    padding: 25px;
-    min-height: 115px;
+.stat-card {
+    background: #0b1624;
+    border: 1px solid #172638;
+    border-radius: 14px;
+    padding: 23px;
 }
 
 .stat-number {
     font-size: 30px;
-    font-weight: 850;
+    font-weight: 800;
+    color: #ffffff;
 }
 
 .stat-label {
-    color: #71869b;
-    font-size: 12px;
+    color: #63788d;
+    font-size: 11px;
     margin-top: 5px;
 }
 
 
-/* ---------- PIPELINE ---------- */
+/* ================= PROCESS ================= */
 
-.pipeline {
+.process {
     display: grid;
-    grid-template-columns: repeat(4, 1fr);
+    grid-template-columns: repeat(4,1fr);
     margin-top: 35px;
-    border-top: 1px solid rgba(255,255,255,0.09);
 }
 
-.step {
-    padding: 30px 25px;
-    border-right: 1px solid rgba(255,255,255,0.07);
-    position: relative;
+.process-card {
+    padding: 25px;
+    border-left: 1px solid #1a2b3d;
+    min-height: 170px;
 }
 
-.step:last-child {
-    border-right: none;
+.process-card:first-child {
+    border-left: 2px solid #208fff;
 }
 
-.step-number {
-    color: #319eff;
+.number {
+    color: #208fff;
     font-size: 11px;
     font-weight: 800;
 }
 
-.step-title {
-    font-size: 19px;
-    font-weight: 750;
-    margin-top: 18px;
+.process-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin-top: 15px;
 }
 
-.step-description {
-    color: #71869b;
+.process-text {
+    color: #657a8e;
     font-size: 12px;
     line-height: 1.65;
-    margin-top: 9px;
+    margin-top: 8px;
 }
 
 
-/* ---------- FAULT TYPES ---------- */
+/* ================= FAULT CARDS ================= */
 
-.fault {
+.fault-card {
+    background: #0b1624;
+    border: 1px solid #172638;
+    border-radius: 14px;
     padding: 25px;
-    background: rgba(255,255,255,0.03);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 15px;
     min-height: 145px;
 }
 
 .fault-code {
-    color: #3fa9ff;
-    font-size: 10px;
-    letter-spacing: 1px;
+    color: #278fff;
+    font-size: 9px;
     font-weight: 800;
+    letter-spacing: 1.5px;
 }
 
 .fault-title {
-    font-size: 19px;
-    font-weight: 750;
-    margin-top: 12px;
+    font-size: 18px;
+    font-weight: 700;
+    margin-top: 13px;
 }
 
-.fault-description {
-    color: #71869b;
-    font-size: 12px;
+.fault-text {
+    color: #667c90;
+    font-size: 11px;
     line-height: 1.6;
     margin-top: 7px;
 }
 
 
-/* ---------- DASHBOARD ---------- */
+/* ================= DASHBOARD ================= */
 
-.dashboard {
-    background: linear-gradient(135deg, #0b2038, #092b4d);
-    border-radius: 20px;
-    padding: 35px;
-    border: 1px solid rgba(255,255,255,0.07);
+.dashboard-header {
+    padding: 30px;
+    background: linear-gradient(
+        135deg,
+        #0d263e,
+        #0a1a2c
+    );
+    border-radius: 18px;
+    border: 1px solid #183249;
 }
 
 .dashboard-title {
-    font-size: 32px;
+    font-size: 30px;
     font-weight: 800;
 }
 
-.dashboard-description {
-    color: #7f96aa;
+.dashboard-text {
+    color: #7890a5;
+    font-size: 13px;
     margin-top: 7px;
 }
 
 
-/* ---------- FORM ---------- */
-
-.form-panel {
-    background: rgba(255,255,255,0.035);
-    border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 18px;
-    padding: 30px;
-}
-
-.form-title {
-    font-size: 19px;
-    font-weight: 750;
-    margin-bottom: 25px;
-}
-
-
-/* ---------- RESULT ---------- */
-
-.result {
-    margin-top: 30px;
-    padding: 35px;
-    border-radius: 18px;
-    border: 1px solid rgba(255,255,255,0.08);
-}
+/* ================= RESULT ================= */
 
 .result-normal {
-    background: rgba(25,190,120,0.08);
-    border-color: rgba(25,210,140,0.2);
+    padding: 30px;
+    border-radius: 15px;
+    background: rgba(31,210,135,0.07);
+    border: 1px solid rgba(31,210,135,0.25);
 }
 
 .result-fault {
-    background: rgba(255,75,75,0.08);
-    border-color: rgba(255,75,75,0.2);
+    padding: 30px;
+    border-radius: 15px;
+    background: rgba(255,67,67,0.07);
+    border: 1px solid rgba(255,67,67,0.25);
 }
 
 .result-label {
-    font-size: 10px;
-    color: #7e95aa;
-    letter-spacing: 1.5px;
+    font-size: 9px;
+    letter-spacing: 2px;
+    color: #71879a;
 }
 
 .result-value {
-    font-size: 34px;
-    font-weight: 850;
+    font-size: 32px;
+    font-weight: 800;
     margin-top: 8px;
 }
 
-.result-confidence {
-    color: #8ca1b5;
+.result-info {
+    color: #8296a9;
+    font-size: 13px;
     margin-top: 8px;
 }
 
 
-/* ---------- FOOTER ---------- */
+/* ================= INPUTS ================= */
+
+label {
+    color: #a7b8c8 !important;
+}
+
+div[data-baseweb="input"] {
+    background: #0c1927 !important;
+}
+
+input {
+    color: white !important;
+}
+
+
+/* ================= FOOTER ================= */
 
 .footer {
-    margin-top: 100px;
+    margin-top: 90px;
     padding-top: 25px;
-    border-top: 1px solid rgba(255,255,255,0.07);
+    border-top: 1px solid #172333;
     text-align: center;
-    color: #52677b;
-    font-size: 11px;
+    color: #506478;
+    font-size: 10px;
+    letter-spacing: 1px;
 }
 
 </style>
 """, unsafe_allow_html=True)
 
 
-# ============================================================
+# =========================================================
 # NAVBAR
-# ============================================================
+# =========================================================
 
 st.markdown("""
-<div class="nav">
+<div class="navbar">
 
-    <div class="logo-area">
+    <div class="logo-wrapper">
 
         <div class="logo">⚡</div>
 
         <div>
-            <div class="logo-text">ElectroGuard AI</div>
-            <div class="logo-sub">
-                INTELLIGENT ELECTRICAL MONITORING
+            <div class="brand">ElectroGuard AI</div>
+            <div class="brand-small">
+                INTELLIGENT POWER MONITORING
             </div>
         </div>
 
     </div>
 
-    <div class="status">
-        <div class="status-dot"></div>
-        ML SYSTEM ONLINE
+    <div class="online">
+        <div class="online-dot"></div>
+        SYSTEM ONLINE
     </div>
 
 </div>
 """, unsafe_allow_html=True)
 
 
-# ============================================================
-# NAVIGATION BUTTONS
-# ============================================================
+# =========================================================
+# NAVIGATION
+# =========================================================
 
-nav1, nav2, nav3, nav4 = st.columns([1, 1, 1, 1])
+n1, n2, n3, n4 = st.columns(4)
 
-with nav1:
-    if st.button("HOME", use_container_width=True):
-        st.session_state.page = "Home"
+with n1:
+    if st.button("Overview", use_container_width=True):
+        st.session_state.page = "Overview"
+        st.rerun()
 
-with nav2:
-    if st.button("FAULT ANALYSIS", use_container_width=True):
+with n2:
+    if st.button("Fault Analysis", use_container_width=True):
         st.session_state.page = "Analysis"
+        st.rerun()
 
-with nav3:
-    if st.button("SYSTEM", use_container_width=True):
+with n3:
+    if st.button("System Architecture", use_container_width=True):
         st.session_state.page = "System"
+        st.rerun()
 
-with nav4:
-    if st.button("ABOUT", use_container_width=True):
+with n4:
+    if st.button("About Project", use_container_width=True):
         st.session_state.page = "About"
+        st.rerun()
 
 
-# ============================================================
-# HOME
-# ============================================================
+# =========================================================
+# OVERVIEW
+# =========================================================
 
-if st.session_state.page == "Home":
+if st.session_state.page == "Overview":
 
     st.markdown("""
     <div class="hero">
 
-        <div class="hero-grid"></div>
+        <div class="grid"></div>
 
         <div class="hero-content">
 
-            <div class="eyebrow">
-                AI-POWERED ELECTRICAL FAULT DETECTION
+            <div class="tag">
+                AI-BASED ELECTRICAL FAULT DETECTION
             </div>
 
             <div class="hero-title">
                 Predict electrical faults
-                <span>before failure.</span>
+                <br>
+                <span class="blue">before failure.</span>
             </div>
 
-            <div class="hero-description">
-                ElectroGuard AI uses machine learning to analyze
-                electrical operating parameters and identify abnormal
-                conditions before they develop into serious system faults.
+            <div class="hero-text">
+                ElectroGuard AI analyzes voltage, current, frequency,
+                power factor, temperature and THD using a trained
+                machine-learning model to identify abnormal
+                electrical conditions.
             </div>
 
         </div>
 
 
-        <div class="hero-panel">
+        <div class="monitor">
 
-            <div class="panel-top">
-
-                <div class="panel-title">
-                    POWER SYSTEM MONITOR
-                </div>
-
-                <div class="live">
-                    ● LIVE
-                </div>
-
+            <div class="monitor-header">
+                <span>POWER SYSTEM MONITOR</span>
+                <span class="live">● LIVE</span>
             </div>
 
+            <div class="wave">
 
-            <div class="wave-area">
-
-                <svg class="wave"
-                     viewBox="0 0 330 130"
+                <svg viewBox="0 0 360 155"
                      preserveAspectRatio="none">
 
                     <polyline
                         points="
-                        0,65
-                        15,65
-                        25,30
-                        38,100
-                        52,65
-                        70,65
-                        85,40
-                        98,90
-                        112,65
-                        130,65
-                        145,25
-                        158,105
-                        172,65
-                        190,65
-                        205,38
-                        218,92
-                        232,65
-                        250,65
-                        265,28
-                        278,100
-                        292,65
-                        310,65
-                        330,65"
+                        0,78
+                        15,78
+                        25,35
+                        40,120
+                        55,78
+                        75,78
+                        90,42
+                        105,110
+                        120,78
+                        145,78
+                        160,30
+                        175,125
+                        190,78
+                        215,78
+                        230,40
+                        245,115
+                        260,78
+                        285,78
+                        300,32
+                        315,122
+                        330,78
+                        360,78"
                         fill="none"
-                        stroke="#27a9ff"
+                        stroke="#229cff"
                         stroke-width="3"
                     />
 
@@ -642,22 +615,21 @@ if st.session_state.page == "Home":
 
             </div>
 
+            <div class="monitor-data">
 
-            <div class="readings">
-
-                <div class="reading">
-                    <div class="reading-label">Voltage</div>
-                    <div class="reading-value">230 V</div>
+                <div class="data">
+                    <div class="data-label">VOLTAGE</div>
+                    <div class="data-value">230 V</div>
                 </div>
 
-                <div class="reading">
-                    <div class="reading-label">Current</div>
-                    <div class="reading-value">5.0 A</div>
+                <div class="data">
+                    <div class="data-label">CURRENT</div>
+                    <div class="data-value">5.0 A</div>
                 </div>
 
-                <div class="reading">
-                    <div class="reading-label">Status</div>
-                    <div class="reading-value">Normal</div>
+                <div class="data">
+                    <div class="data-label">STATUS</div>
+                    <div class="data-value">NORMAL</div>
                 </div>
 
             </div>
@@ -668,17 +640,13 @@ if st.session_state.page == "Home":
     """, unsafe_allow_html=True)
 
 
-    # ========================================================
-    # CTA
-    # ========================================================
-
     st.markdown("<br>", unsafe_allow_html=True)
 
-    c1, c2, c3 = st.columns([1.3, 1, 1.3])
+    c1, c2, c3 = st.columns([1,1,2])
 
     with c1:
         if st.button(
-            "START FAULT ANALYSIS",
+            "START ANALYSIS →",
             type="primary",
             use_container_width=True
         ):
@@ -694,24 +662,24 @@ if st.session_state.page == "Home":
             st.rerun()
 
 
-    # ========================================================
-    # STATISTICS
-    # ========================================================
+    # =====================================================
+    # MODEL
+    # =====================================================
 
     st.markdown("""
     <div class="section">
 
-        <div class="section-kicker">
-            MODEL OVERVIEW
+        <div class="kicker">
+            MODEL PERFORMANCE
         </div>
 
-        <div class="section-title">
-            Built around six electrical parameters
+        <div class="title">
+            Machine-learning system overview
         </div>
 
-        <div class="section-description">
-            The system evaluates multiple operating conditions
-            simultaneously instead of relying on a single threshold.
+        <div class="subtitle">
+            A Random Forest classification model processes six
+            electrical parameters to identify four operating conditions.
         </div>
 
     </div>
@@ -728,81 +696,74 @@ if st.session_state.page == "Home":
         ("100", "Decision trees")
     ]
 
-    for col, (number, label) in zip(cols, stats):
+    for col, (num, text) in zip(cols, stats):
 
         with col:
 
             st.markdown(
                 f"""
-                <div class="stat">
-
-                    <div class="stat-number">
-                        {number}
-                    </div>
-
-                    <div class="stat-label">
-                        {label}
-                    </div>
-
+                <div class="stat-card">
+                    <div class="stat-number">{num}</div>
+                    <div class="stat-label">{text}</div>
                 </div>
                 """,
                 unsafe_allow_html=True
             )
 
 
-    # ========================================================
-    # HOW SYSTEM WORKS
-    # ========================================================
+    # =====================================================
+    # PIPELINE
+    # =====================================================
 
     st.markdown("""
     <div class="section">
 
-        <div class="section-kicker">
-            DETECTION PIPELINE
+        <div class="kicker">
+            HOW IT WORKS
         </div>
 
-        <div class="section-title">
-            From measurement to prediction
+        <div class="title">
+            From electrical signal to AI decision
         </div>
 
     </div>
     """, unsafe_allow_html=True)
 
     st.markdown("""
-    <div class="pipeline">
+    <div class="process">
 
-        <div class="step">
-            <div class="step-number">01</div>
-            <div class="step-title">Measure</div>
-            <div class="step-description">
-                Electrical parameters are collected from
-                the monitored system.
+        <div class="process-card">
+            <div class="number">01</div>
+            <div class="process-title">Measure</div>
+            <div class="process-text">
+                Electrical operating parameters are collected
+                from the monitored system.
             </div>
         </div>
 
-        <div class="step">
-            <div class="step-number">02</div>
-            <div class="step-title">Process</div>
-            <div class="step-description">
-                Measurements are normalized using
-                the trained preprocessing pipeline.
+        <div class="process-card">
+            <div class="number">02</div>
+            <div class="process-title">Normalize</div>
+            <div class="process-text">
+                Measurements are transformed using the same
+                preprocessing pipeline used during training.
             </div>
         </div>
 
-        <div class="step">
-            <div class="step-number">03</div>
-            <div class="step-title">Predict</div>
-            <div class="step-description">
-                The Random Forest classifier evaluates
-                the operating condition.
+        <div class="process-card">
+            <div class="number">03</div>
+            <div class="process-title">Classify</div>
+            <div class="process-text">
+                The Random Forest model evaluates the feature
+                pattern and determines the operating condition.
             </div>
         </div>
 
-        <div class="step">
-            <div class="step-number">04</div>
-            <div class="step-title">Respond</div>
-            <div class="step-description">
-                The detected condition and confidence
+        <div class="process-card">
+            <div class="number">04</div>
+            <div class="process-title">Report</div>
+            <div class="process-text">
+                The detected condition and model confidence
                 are presented to the operator.
             </div>
         </div>
@@ -811,19 +772,19 @@ if st.session_state.page == "Home":
     """, unsafe_allow_html=True)
 
 
-    # ========================================================
-    # FAULT TYPES
-    # ========================================================
+    # =====================================================
+    # FAULTS
+    # =====================================================
 
     st.markdown("""
     <div class="section">
 
-        <div class="section-kicker">
+        <div class="kicker">
             FAULT CLASSIFICATION
         </div>
 
-        <div class="section-title">
-            Conditions the model can identify
+        <div class="title">
+            What ElectroGuard can detect
         </div>
 
     </div>
@@ -831,33 +792,47 @@ if st.session_state.page == "Home":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    fault_cols = st.columns(4)
+    cols = st.columns(4)
 
     faults = [
-        ("F-01", "Normal", "Operating parameters remain within the expected range."),
-        ("F-02", "Overvoltage", "Voltage rises above the expected operating condition."),
-        ("F-03", "Undervoltage", "Voltage falls below the expected operating condition."),
-        ("F-04", "Overcurrent", "Current rises beyond the expected operating condition.")
+        (
+            "F-01",
+            "Normal",
+            "Operating parameters remain within the expected range."
+        ),
+        (
+            "F-02",
+            "Overvoltage",
+            "Voltage rises above the expected operating condition."
+        ),
+        (
+            "F-03",
+            "Undervoltage",
+            "Voltage falls below the expected operating condition."
+        ),
+        (
+            "F-04",
+            "Overcurrent",
+            "Current exceeds the expected operating condition."
+        )
     ]
 
-    for col, (code, title, description) in zip(fault_cols, faults):
+    for col, (code, title, text) in zip(cols, faults):
 
         with col:
 
             st.markdown(
                 f"""
-                <div class="fault">
+                <div class="fault-card">
 
-                    <div class="fault-code">
-                        {code}
-                    </div>
+                    <div class="fault-code">{code}</div>
 
                     <div class="fault-title">
                         {title}
                     </div>
 
-                    <div class="fault-description">
-                        {description}
+                    <div class="fault-text">
+                        {text}
                     </div>
 
                 </div>
@@ -866,22 +841,23 @@ if st.session_state.page == "Home":
             )
 
 
-# ============================================================
-# FAULT ANALYSIS PAGE
-# ============================================================
+# =========================================================
+# ANALYSIS
+# =========================================================
 
 elif st.session_state.page == "Analysis":
 
     st.markdown("""
-    <div class="dashboard">
+    <div class="dashboard-header">
 
         <div class="dashboard-title">
             Electrical Fault Analysis
         </div>
 
-        <div class="dashboard-description">
-            Enter measured electrical parameters and run the trained
-            machine-learning model.
+        <div class="dashboard-text">
+            Enter the measured electrical parameters below.
+            The trained machine-learning model will classify
+            the operating condition.
         </div>
 
     </div>
@@ -889,169 +865,218 @@ elif st.session_state.page == "Analysis":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    st.markdown("""
-    <div class="form-panel">
-
-        <div class="form-title">
-            System measurements
-        </div>
-
-    </div>
-    """, unsafe_allow_html=True)
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    col1, col2, col3 = st.columns(3)
+    col1, col2 = st.columns([1.6, 1])
 
     with col1:
 
-        voltage = st.number_input(
-            "Voltage (V)",
-            min_value=0.0,
-            max_value=500.0,
-            value=230.0,
-            step=1.0
-        )
+        st.markdown("""
+        <div class="fault-card">
 
-        frequency = st.number_input(
-            "Frequency (Hz)",
-            min_value=0.0,
-            max_value=100.0,
-            value=50.0,
-            step=0.1
-        )
+            <div class="fault-code">
+                INPUT PARAMETERS
+            </div>
 
-    with col2:
+            <div class="fault-title">
+                Electrical measurements
+            </div>
 
-        current = st.number_input(
-            "Current (A)",
-            min_value=0.0,
-            max_value=500.0,
-            value=5.0,
-            step=0.5
-        )
-
-        power_factor = st.number_input(
-            "Power Factor",
-            min_value=0.0,
-            max_value=1.0,
-            value=0.95,
-            step=0.01
-        )
-
-    with col3:
-
-        temperature = st.number_input(
-            "Temperature (°C)",
-            min_value=-20.0,
-            max_value=150.0,
-            value=30.0,
-            step=1.0
-        )
-
-        thd = st.number_input(
-            "THD (%)",
-            min_value=0.0,
-            max_value=100.0,
-            value=2.0,
-            step=0.5
-        )
-
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    if st.button(
-        "RUN AI ANALYSIS",
-        type="primary",
-        use_container_width=True
-    ):
-
-        input_data = np.array([[
-            voltage,
-            current,
-            frequency,
-            power_factor,
-            temperature,
-            thd
-        ]])
-
-        input_scaled = scaler.transform(input_data)
-
-        prediction = model.predict(input_scaled)[0]
-
-        probabilities = model.predict_proba(input_scaled)[0]
-
-        confidence = float(np.max(probabilities) * 100)
-
-        st.session_state.prediction = prediction
-        st.session_state.confidence = confidence
-
-        st.rerun()
-
-
-    # ========================================================
-    # RESULT
-    # ========================================================
-
-    if st.session_state.prediction is not None:
-
-        prediction = st.session_state.prediction
-        confidence = st.session_state.confidence
+        </div>
+        """, unsafe_allow_html=True)
 
         st.markdown("<br>", unsafe_allow_html=True)
 
-        if prediction == "Normal":
+        c1, c2 = st.columns(2)
 
-            result_class = "result result-normal"
+        with c1:
 
-            description = (
-                "The supplied electrical measurements are "
-                "classified as operating within the normal condition."
+            voltage = st.number_input(
+                "Voltage (V)",
+                0.0,
+                500.0,
+                230.0,
+                1.0
+            )
+
+            current = st.number_input(
+                "Current (A)",
+                0.0,
+                500.0,
+                5.0,
+                0.5
+            )
+
+            frequency = st.number_input(
+                "Frequency (Hz)",
+                0.0,
+                100.0,
+                50.0,
+                0.1
+            )
+
+        with c2:
+
+            power_factor = st.number_input(
+                "Power Factor",
+                0.0,
+                1.0,
+                0.95,
+                0.01
+            )
+
+            temperature = st.number_input(
+                "Temperature (°C)",
+                -20.0,
+                150.0,
+                30.0,
+                1.0
+            )
+
+            thd = st.number_input(
+                "THD (%)",
+                0.0,
+                100.0,
+                2.0,
+                0.5
+            )
+
+
+        if st.button(
+            "RUN AI FAULT ANALYSIS",
+            type="primary",
+            use_container_width=True
+        ):
+
+            data = np.array([[
+                voltage,
+                current,
+                frequency,
+                power_factor,
+                temperature,
+                thd
+            ]])
+
+            scaled_data = scaler.transform(data)
+
+            prediction = model.predict(scaled_data)[0]
+
+            probabilities = model.predict_proba(scaled_data)[0]
+
+            confidence = float(
+                np.max(probabilities) * 100
+            )
+
+            st.session_state.prediction = prediction
+            st.session_state.confidence = confidence
+
+            st.rerun()
+
+
+    with col2:
+
+        st.markdown("""
+        <div class="fault-card">
+
+            <div class="fault-code">
+                AI OUTPUT
+            </div>
+
+            <div class="fault-title">
+                Prediction result
+            </div>
+
+        </div>
+        """, unsafe_allow_html=True)
+
+        st.markdown("<br>", unsafe_allow_html=True)
+
+        if st.session_state.prediction is None:
+
+            st.info(
+                "Enter the electrical parameters and run "
+                "the AI analysis."
             )
 
         else:
 
-            result_class = "result result-fault"
+            prediction = st.session_state.prediction
+            confidence = st.session_state.confidence
 
-            description = (
-                "The machine-learning model has identified "
-                "an abnormal electrical operating condition."
-            )
+            if prediction == "Normal":
 
+                st.markdown(
+                    f"""
+                    <div class="result-normal">
+
+                        <div class="result-label">
+                            OPERATING CONDITION
+                        </div>
+
+                        <div class="result-value">
+                            NORMAL
+                        </div>
+
+                        <div class="result-info">
+                            No abnormal electrical condition
+                            was identified.
+                        </div>
+
+                        <br>
+
+                        <div class="result-info">
+                            Model confidence:
+                            <strong>{confidence:.2f}%</strong>
+                        </div>
+
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+            else:
+
+                st.markdown(
+                    f"""
+                    <div class="result-fault">
+
+                        <div class="result-label">
+                            FAULT DETECTED
+                        </div>
+
+                        <div class="result-value">
+                            {prediction.upper()}
+                        </div>
+
+                        <div class="result-info">
+                            The model identified an abnormal
+                            electrical operating condition.
+                        </div>
+
+                        <br>
+
+                        <div class="result-info">
+                            Model confidence:
+                            <strong>{confidence:.2f}%</strong>
+                        </div>
+
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+
+
+    # =====================================================
+    # MEASUREMENTS
+    # =====================================================
+
+    if st.session_state.prediction is not None:
+
+        st.markdown("<br><br>", unsafe_allow_html=True)
 
         st.markdown(
-            f"""
-            <div class="{result_class}">
-
-                <div class="result-label">
-                    AI CLASSIFICATION RESULT
-                </div>
-
-                <div class="result-value">
-                    {prediction}
-                </div>
-
-                <div class="result-confidence">
-                    {description}
-                </div>
-
-                <br>
-
-                <div class="result-confidence">
-                    Model confidence: <strong>{confidence:.2f}%</strong>
-                </div>
-
-            </div>
-            """,
-            unsafe_allow_html=True
+            "### Measurement Summary"
         )
 
-
-        st.markdown("<br>", unsafe_allow_html=True)
-
-        st.subheader("Input measurements")
-
-        measurements = pd.DataFrame({
+        table = pd.DataFrame({
             "Parameter": [
                 "Voltage",
                 "Current",
@@ -1060,7 +1085,7 @@ elif st.session_state.page == "Analysis":
                 "Temperature",
                 "THD"
             ],
-            "Value": [
+            "Measured Value": [
                 f"{voltage:.2f} V",
                 f"{current:.2f} A",
                 f"{frequency:.2f} Hz",
@@ -1071,27 +1096,27 @@ elif st.session_state.page == "Analysis":
         })
 
         st.dataframe(
-            measurements,
+            table,
             use_container_width=True,
             hide_index=True
         )
 
 
-# ============================================================
-# SYSTEM PAGE
-# ============================================================
+# =========================================================
+# SYSTEM ARCHITECTURE
+# =========================================================
 
 elif st.session_state.page == "System":
 
     st.markdown("""
-    <div class="dashboard">
+    <div class="dashboard-header">
 
         <div class="dashboard-title">
             System Architecture
         </div>
 
-        <div class="dashboard-description">
-            Overview of the machine-learning pipeline used by
+        <div class="dashboard-text">
+            The complete machine-learning pipeline used by
             ElectroGuard AI.
         </div>
 
@@ -1100,116 +1125,72 @@ elif st.session_state.page == "System":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    col1, col2 = st.columns(2)
+    cols = st.columns(4)
 
-    with col1:
+    architecture = [
+        (
+            "01",
+            "Electrical Inputs",
+            "Voltage, current, frequency, power factor, temperature and THD."
+        ),
+        (
+            "02",
+            "Preprocessing",
+            "StandardScaler transforms the incoming feature values."
+        ),
+        (
+            "03",
+            "ML Model",
+            "Random Forest evaluates the processed feature vector."
+        ),
+        (
+            "04",
+            "Fault Output",
+            "Normal, Overvoltage, Undervoltage or Overcurrent."
+        )
+    ]
 
-        st.markdown("""
-        <div class="fault">
+    for col, (number, title, text) in zip(cols, architecture):
 
-            <div class="fault-code">
-                INPUT LAYER
-            </div>
+        with col:
 
-            <div class="fault-title">
-                Electrical parameters
-            </div>
+            st.markdown(
+                f"""
+                <div class="fault-card">
 
-            <div class="fault-description">
-                Voltage, current, frequency, power factor,
-                temperature and THD form the input feature vector.
-            </div>
+                    <div class="fault-code">
+                        STAGE {number}
+                    </div>
 
-        </div>
-        """, unsafe_allow_html=True)
+                    <div class="fault-title">
+                        {title}
+                    </div>
 
+                    <div class="fault-text">
+                        {text}
+                    </div>
 
-    with col2:
-
-        st.markdown("""
-        <div class="fault">
-
-            <div class="fault-code">
-                PROCESSING
-            </div>
-
-            <div class="fault-title">
-                StandardScaler
-            </div>
-
-            <div class="fault-description">
-                Input values are transformed using the same
-                scaling process used during model training.
-            </div>
-
-        </div>
-        """, unsafe_allow_html=True)
-
-
-    st.markdown("<br>", unsafe_allow_html=True)
-
-    col3, col4 = st.columns(2)
-
-    with col3:
-
-        st.markdown("""
-        <div class="fault">
-
-            <div class="fault-code">
-                ML ENGINE
-            </div>
-
-            <div class="fault-title">
-                Random Forest Classifier
-            </div>
-
-            <div class="fault-description">
-                An ensemble of 100 decision trees evaluates
-                the electrical operating condition.
-            </div>
-
-        </div>
-        """, unsafe_allow_html=True)
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
 
 
-    with col4:
-
-        st.markdown("""
-        <div class="fault">
-
-            <div class="fault-code">
-                OUTPUT
-            </div>
-
-            <div class="fault-title">
-                Fault classification
-            </div>
-
-            <div class="fault-description">
-                The model returns one of four conditions:
-                Normal, Overvoltage, Undervoltage or Overcurrent.
-            </div>
-
-        </div>
-        """, unsafe_allow_html=True)
-
-
-# ============================================================
-# ABOUT PAGE
-# ============================================================
+# =========================================================
+# ABOUT
+# =========================================================
 
 elif st.session_state.page == "About":
 
     st.markdown("""
-    <div class="dashboard">
+    <div class="dashboard-header">
 
         <div class="dashboard-title">
             About ElectroGuard AI
         </div>
 
-        <div class="dashboard-description">
-            An AI-based prototype for intelligent electrical
-            fault classification.
+        <div class="dashboard-text">
+            AI-based electrical fault detection and classification.
         </div>
 
     </div>
@@ -1218,24 +1199,29 @@ elif st.session_state.page == "About":
     st.markdown("<br>", unsafe_allow_html=True)
 
     st.markdown("""
-    <div class="fault">
+    <div class="fault-card">
 
         <div class="fault-code">
-            PROJECT OBJECTIVE
+            PROJECT
         </div>
 
         <div class="fault-title">
-            Early identification of abnormal electrical conditions
+            Intelligent electrical monitoring
         </div>
 
-        <div class="fault-description">
-            ElectroGuard AI analyzes multiple electrical parameters
-            simultaneously and uses machine learning to classify
-            the current operating condition of a power system.
+        <div class="fault-text">
 
-            The current prototype is trained using synthetic data
-            and demonstrates the complete workflow from data
-            preprocessing to model prediction and web deployment.
+            ElectroGuard AI is a machine-learning prototype designed
+            to analyze electrical operating parameters and classify
+            potential faults.
+
+            The system uses six electrical features and a Random Forest
+            classifier to distinguish between normal operation,
+            overvoltage, undervoltage and overcurrent conditions.
+
+            The current model is trained using synthetic prototype data.
+            Real-world deployment would require validation using
+            measured electrical data from actual power systems.
 
         </div>
 
@@ -1246,20 +1232,20 @@ elif st.session_state.page == "About":
 
     cols = st.columns(4)
 
-    tech = [
+    technologies = [
         ("PYTHON", "Core development"),
-        ("SCIKIT-LEARN", "ML framework"),
-        ("RANDOM FOREST", "Classification model"),
+        ("SCIKIT-LEARN", "Machine learning"),
+        ("RANDOM FOREST", "Fault classification"),
         ("STREAMLIT", "Web application")
     ]
 
-    for col, (title, desc) in zip(cols, tech):
+    for col, (title, text) in zip(cols, technologies):
 
         with col:
 
             st.markdown(
                 f"""
-                <div class="stat">
+                <div class="stat-card">
 
                     <div class="stat-number"
                          style="font-size:18px;">
@@ -1267,7 +1253,7 @@ elif st.session_state.page == "About":
                     </div>
 
                     <div class="stat-label">
-                        {desc}
+                        {text}
                     </div>
 
                 </div>
@@ -1276,12 +1262,12 @@ elif st.session_state.page == "About":
             )
 
 
-# ============================================================
+# =========================================================
 # FOOTER
-# ============================================================
+# =========================================================
 
 st.markdown("""
 <div class="footer">
-    ELECTROGUARD AI · AI-BASED ELECTRICAL FAULT DETECTION · ML PROTOTYPE
+    ELECTROGUARD AI  •  AI-BASED ELECTRICAL FAULT DETECTION
 </div>
 """, unsafe_allow_html=True)
