@@ -296,9 +296,13 @@ div[data-testid="stVerticalBlockBorderWrapper"] {
 
 /* ================= INPUTS ================= */
 label { color: #a7b8c8 !important; }
-div[data-baseweb="input"] { background: #0c1927 !important; border-radius: 10px !important; }
-input { color: white !important; }
-div[data-baseweb="input"] > div { border-radius: 10px !important; border-color: #1c2f44 !important; }
+div[data-baseweb="input"] { background: #eef2f8 !important; border-radius: 10px !important; }
+input {
+    color: #0a1220 !important;
+    -webkit-text-fill-color: #0a1220 !important;
+}
+input::placeholder { color: #6b7d92 !important; opacity: 1 !important; }
+div[data-baseweb="input"] > div { border-radius: 10px !important; border-color: #c7d2e0 !important; }
 
 /* primary buttons -> electric gradient */
 .stButton > button[kind="primary"] {
