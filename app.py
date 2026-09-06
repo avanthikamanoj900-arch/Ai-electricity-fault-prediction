@@ -1,7 +1,9 @@
 import streamlit as st
 import numpy as np
 import pandas as pd
-import joblib
+
+import auth
+import model as model_backend
 
 # =========================================================
 # PAGE CONFIG
@@ -11,28 +13,6 @@ st.set_page_config(
     page_icon="⚡",
     layout="wide"
 )
-
-# =========================================================
-# LOAD MODEL
-# =========================================================
-@st.cache_resource
-def load_model():
-    model = joblib.load("electrical_fault_model.pkl")
-    scaler = joblib.load("scaler.pkl")
-    return model, scaler
-
-model, scaler = load_model()
-
-# =========================================================
-# DEMO USER STORE
-# =========================================================
-# NOTE: this is an in-memory demo store only — accounts reset every time the
-# app restarts. Swap this for a real database / secrets-based auth (e.g.
-# streamlit-authenticator, Supabase, Firebase) before using this in production.
-if "users" not in st.session_state:
-    st.session_state.users = {
-        "admin": "admin123"
-    }
 
 # =========================================================
 # SESSION STATE
@@ -327,27 +307,6 @@ div[data-baseweb="input"] > div { border-radius: 10px !important; border-color: 
 
 
 # =========================================================
-# AUTH HELPERS
-# =========================================================
-def attempt_login(username: str, password: str) -> bool:
-    return (
-        username in st.session_state.users
-        and st.session_state.users[username] == password
-    )
-
-
-def attempt_signup(username: str, password: str, confirm: str):
-    if not username or not password:
-        return False, "Please fill in both a username and a password."
-    if username in st.session_state.users:
-        return False, "That username is already taken."
-    if password != confirm:
-        return False, "Passwords do not match."
-    st.session_state.users[username] = password
-    return True, "Account created — you can log in now."
-
-
-# =========================================================
 # LOGIN / SIGN UP PAGE
 # =========================================================
 def render_auth_page():
@@ -397,13 +356,14 @@ def render_auth_page():
                     )
 
                 if st.button("Log in", use_container_width=True, type="primary"):
-                    if attempt_login(username, password):
+                    ok, message = auth.login(username, password)
+                    if ok:
                         st.session_state.logged_in = True
                         st.session_state.current_user = username
                         st.session_state.auth_error = ""
                         st.rerun()
                     else:
-                        st.session_state.auth_error = "Incorrect username or password."
+                        st.session_state.auth_error = message
                         st.rerun()
 
                 st.markdown(
@@ -440,7 +400,7 @@ def render_auth_page():
                 )
 
                 if st.button("Sign up", use_container_width=True, type="primary"):
-                    ok, message = attempt_signup(new_username, new_password, confirm_password)
+                    ok, message = auth.register_user(new_username, new_password, confirm_password)
                     if ok:
                         st.session_state.auth_mode = "login"
                         st.session_state.auth_error = ""
@@ -709,13 +669,10 @@ elif st.session_state.page == "Analysis":
             thd = st.number_input("THD (%)", 0.0, 100.0, 2.0, 0.5)
 
         if st.button("RUN AI FAULT ANALYSIS", type="primary", use_container_width=True):
-            data = np.array([[voltage, current, frequency, power_factor, temperature, thd]])
-            scaled_data = scaler.transform(data)
-            prediction = model.predict(scaled_data)[0]
-            probabilities = model.predict_proba(scaled_data)[0]
-            confidence = float(np.max(probabilities) * 100)
-
-            st.session_state.prediction = prediction
+            pred_label, confidence = model_backend.predict(
+                voltage, current, frequency, power_factor, temperature, thd
+            )
+            st.session_state.prediction = pred_label
             st.session_state.confidence = confidence
             st.rerun()
 
@@ -732,19 +689,7 @@ elif st.session_state.page == "Analysis":
         if st.session_state.prediction is None:
             st.info("Enter the electrical parameters and run the AI analysis.")
         else:
-            # NOTE: adjust this label map to match the exact class order your
-            # model was trained/encoded with (check train_model.py).
-            label_map = {
-                0: "Normal",
-                1: "Overvoltage",
-                2: "Undervoltage",
-                3: "Overcurrent"
-            }
-            try:
-                pred_label = label_map.get(int(st.session_state.prediction), str(st.session_state.prediction))
-            except (TypeError, ValueError):
-                pred_label = str(st.session_state.prediction)
-
+            pred_label = st.session_state.prediction
             css_class = "result-normal" if pred_label == "Normal" else "result-fault"
 
             st.markdown(
